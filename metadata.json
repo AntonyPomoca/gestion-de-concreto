@@ -1,5 +1,5 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Gestión de concreto",
+  "description": "Sistema de gestión y seguimiento de pedidos de concreto en tiempo real con autenticación compartida y análisis de puntualidad.",
   "requestFramePermissions": []
 }

@@ -10,11 +10,12 @@ import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
-import { Download, Upload, Plus, Trash2, LogOut, User } from 'lucide-react';
+import { Download, Upload, Plus, Trash2, LogOut, User, Truck } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { ThemeToggle } from './components/ThemeToggle';
-import { auth, logout } from './lib/firebase';
+import { auth, logout, db } from './lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { collection, onSnapshot, query, orderBy, getDocs, writeBatch, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { LoginView } from './components/LoginView';
 
 export default function App() {
@@ -32,32 +33,31 @@ export default function App() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadOrders = async () => {
-    try {
-      const data = await api.getOrders();
-      setOrders(data);
-    } catch (error) {
-      toast.error('Error al cargar pedidos');
-    }
+  const loadOrders = () => {
+    // We now use real-time listeners in useEffect
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthReady(true);
     });
 
-    fetch('/api/test')
-      .then(res => res.json())
-      .then(data => console.log("API Test:", data))
-      .catch(err => console.error("API Test Error:", err));
-    
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
     if (isAuthReady && user) {
-      loadOrders();
+      const q = query(collection(db, 'orders'), orderBy('orderDate', 'desc'), orderBy('scheduledTime', 'desc'));
+      const unsubscribeOrders = onSnapshot(q, (snapshot) => {
+        const loadedOrders = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Order));
+        setOrders(loadedOrders);
+      }, (error) => {
+        console.error("Firestore error:", error);
+        toast.error('Error al sincronizar datos en tiempo real');
+      });
+
+      return () => unsubscribeOrders();
     }
   }, [isAuthReady, user]);
 
@@ -241,7 +241,6 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Client-side check for .xls
     if (file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
       toast.error('El formato .xls no es compatible. Por favor, guarde el archivo como .xlsx (Excel moderno) e intente de nuevo.');
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -250,12 +249,100 @@ export default function App() {
 
     setImporting(true);
     try {
-      const res = await api.importExcel(file);
-      toast.success(res.message || 'Datos importados correctamente');
-      loadOrders();
+      const workbook = new ExcelJS.Workbook();
+      const arrayBuffer = await file.arrayBuffer();
+      
+      let worksheet;
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        await workbook.csv.read(new Response(arrayBuffer).body as any);
+        worksheet = workbook.getWorksheet(1);
+      } else {
+        await workbook.xlsx.load(arrayBuffer);
+        worksheet = workbook.worksheets.find(s => s.state === 'visible') || workbook.worksheets[0];
+      }
+
+      if (!worksheet) {
+        throw new Error('No se encontró una hoja válida en el archivo');
+      }
+
+      const normalizeDateFunc = (dateVal: any): string => {
+        if (!dateVal) return '';
+        let val = dateVal;
+        if (typeof dateVal === 'object' && dateVal.result !== undefined) val = dateVal.result;
+        if (val instanceof Date) {
+          return val.toISOString().split('T')[0];
+        }
+        return String(val).trim();
+      };
+
+      const ordersMap = new Map<string, any>();
+      
+      // Column finding logic (simple version)
+      let colFecha = 1, colHora = 2, colPedido = 3, colVolumen = 4;
+      let colCliente = -1, colProdComercial = -1, colDescTecnica = -1, colElemColar = -1;
+
+      worksheet.getRow(1).eachCell((cell, colNumber) => {
+        const val = cell.value?.toString().toLowerCase() || '';
+        if (val.includes('fecha')) colFecha = colNumber;
+        else if (val.includes('hora') || val.includes('prog')) colHora = colNumber;
+        else if (val.includes('vol') || val.includes('m3')) colVolumen = colNumber;
+        else if (val.includes('pedido') || val.includes('nro')) colPedido = colNumber;
+        else if (val.includes('cliente')) colCliente = colNumber;
+        else if (val.includes('prod. comercial')) colProdComercial = colNumber;
+        else if (val.includes('desc. técnica')) colDescTecnica = colNumber;
+        else if (val.includes('elem. a colar')) colElemColar = colNumber;
+      });
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        
+        const orderDate = normalizeDateFunc(row.getCell(colFecha).value);
+        let orderNumber = row.getCell(colPedido).value?.toString().trim() || '';
+        if (!orderDate || !orderNumber) return;
+
+        let scheduledTime = '';
+        const timeCell = row.getCell(colHora).value;
+        if (timeCell instanceof Date) {
+          scheduledTime = timeCell.toTimeString().substring(0, 5);
+        } else if (typeof timeCell === 'number') {
+          const totalMinutes = Math.round(timeCell * 24 * 60);
+          scheduledTime = `${Math.floor(totalMinutes / 60).toString().padStart(2, '0')}:${(totalMinutes % 60).toString().padStart(2, '0')}`;
+        } else {
+          scheduledTime = String(timeCell || '').trim();
+        }
+
+        const requestedVolume = parseFloat(row.getCell(colVolumen).value?.toString() || '0');
+        const compositeKey = `${orderNumber}_${orderDate}`;
+
+        if (!ordersMap.has(compositeKey)) {
+          ordersMap.set(compositeKey, {
+            id: Math.random().toString(36).substring(2, 15),
+            orderNumber,
+            orderDate,
+            scheduledTime,
+            requestedVolume,
+            actualVolume: 0,
+            unitCapacity: 8,
+            status: 'A tiempo',
+            trips: [],
+            clientName: colCliente !== -1 ? row.getCell(colCliente).value?.toString() : '',
+            commercialProduct: colProdComercial !== -1 ? row.getCell(colProdComercial).value?.toString() : '',
+            technicalDescription: colDescTecnica !== -1 ? row.getCell(colDescTecnica).value?.toString() : '',
+            elementToPour: colElemColar !== -1 ? row.getCell(colElemColar).value?.toString() : '',
+          });
+        }
+      });
+
+      const batch = writeBatch(db);
+      for (const order of ordersMap.values()) {
+        const orderRef = doc(db, 'orders', order.id);
+        batch.set(orderRef, { ...order, createdAt: serverTimestamp() });
+      }
+      await batch.commit();
+      toast.success(`Importados ${ordersMap.size} pedidos correctamente`);
     } catch (error: any) {
       console.error("Import error details:", error);
-      toast.error(error.message || 'Error al importar archivo');
+      toast.error('Error al procesar el archivo Excel en el navegador');
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -294,7 +381,10 @@ export default function App() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Hola, {user.displayName?.split(' ')[0]}</h1>
+                <div className="flex items-center gap-2">
+                  <Truck className="w-6 h-6 text-slate-900 dark:text-slate-50" />
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Hola, {user.displayName?.split(' ')[0]}</h1>
+                </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Gestión de Concreto</p>
               </div>
             </div>
