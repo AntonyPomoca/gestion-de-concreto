@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Order, Trip } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus, Trash2 } from 'lucide-react';
@@ -16,6 +17,19 @@ type OrderFormData = Omit<Order, 'requestedVolume' | 'actualVolume' | 'unitCapac
   requestedVolume: number | string;
   actualVolume: number | string;
   unitCapacity: number | string;
+};
+
+const format12h = (time: string) => {
+  if (!time) return '';
+  try {
+    const [h, m] = time.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+  } catch (e) {
+    return '';
+  }
 };
 
 export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
@@ -56,7 +70,7 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
     };
   });
 
-  const handleOrderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOrderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setOrder(prev => {
       const isNumericField = ['requestedVolume', 'actualVolume', 'unitCapacity'].includes(name);
@@ -137,7 +151,14 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
             <Input type="date" id="orderDate" name="orderDate" value={order.orderDate || ''} onChange={handleOrderChange} required className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="scheduledTime" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Hora Programada</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="scheduledTime" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Hora Programada</Label>
+              {order.scheduledTime && (
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                  {format12h(order.scheduledTime)}
+                </span>
+              )}
+            </div>
             <Input type="time" id="scheduledTime" name="scheduledTime" value={order.scheduledTime || ''} onChange={handleOrderChange} required className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
           </div>
           <div className="space-y-2">
@@ -188,7 +209,14 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
           </div>
           <div className="space-y-2 lg:col-span-4">
             <Label htmlFor="customerComments" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Comentarios Cliente</Label>
-            <Input id="customerComments" name="customerComments" value={order.customerComments || ''} onChange={handleOrderChange} className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+            <Textarea 
+              id="customerComments" 
+              name="customerComments" 
+              value={order.customerComments || ''} 
+              onChange={(e: any) => handleOrderChange(e)} 
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 min-h-[100px]" 
+              placeholder="Añadir observaciones aquí..."
+            />
           </div>
         </div>
       </div>
@@ -231,11 +259,25 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
                   <Input name="unitId" value={trip.unitId || 'CR'} onChange={(e) => handleTripChange(index, e)} required className="bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800" placeholder="CR6022" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Llegada a Obra</Label>
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Llegada a Obra</Label>
+                    {trip.arrivalTime && (
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">
+                        {format12h(trip.arrivalTime)}
+                      </span>
+                    )}
+                  </div>
                   <Input type="time" name="arrivalTime" value={trip.arrivalTime || ''} onChange={(e) => handleTripChange(index, e)} className="bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Salida de Obra</Label>
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Salida de Obra</Label>
+                    {trip.returnTime && (
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">
+                        {format12h(trip.returnTime)}
+                      </span>
+                    )}
+                  </div>
                   <Input type="time" name="returnTime" value={trip.returnTime || ''} onChange={(e) => handleTripChange(index, e)} className="bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
                 </div>
                 <div className="flex items-end pb-2">

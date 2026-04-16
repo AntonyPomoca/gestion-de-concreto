@@ -8,7 +8,12 @@ export function calculatePunctuality(scheduledTime: string, arrivalTime: string)
     const scheduled = parse(scheduledTime, 'HH:mm', new Date());
     const arrival = parse(arrivalTime, 'HH:mm', new Date());
     
-    const diffMinutes = differenceInMinutes(arrival, scheduled);
+    let diffMinutes = differenceInMinutes(arrival, scheduled);
+    
+    // Si la diferencia es masiva (ej: llegó a la 01:00 programado a las 23:00), 
+    // probablemente es un cruce de día.
+    if (diffMinutes < -720) diffMinutes += 1440; // +24h
+    if (diffMinutes > 720) diffMinutes -= 1440;  // -24h
     
     if (diffMinutes <= 15) {
       return { status: 'A tiempo', diffMinutes };

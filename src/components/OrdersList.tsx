@@ -47,27 +47,29 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
               let completedTrips = 0;
 
               if (status !== 'Cancelado') {
-                let hasDelay = false;
                 let hasArrival = false;
                 let hasMultiLoad = false;
+                
+                // Sort trips by time to get the "first" one (or use the first index depending on data layout)
+                // For now we use the first one entered that has an arrival time.
+                const firstTripWithArrival = order.trips.find(t => t.arrivalTime);
+                
+                if (firstTripWithArrival) {
+                  hasArrival = true;
+                  const s = calculatePunctuality(order.scheduledTime, firstTripWithArrival.arrivalTime).status;
+                  status = s;
+                } else {
+                  status = 'Pendiente';
+                }
+
+                // Still process all trips for cycle times
                 order.trips.forEach(trip => {
                   if (trip.isMultiLoad) hasMultiLoad = true;
-                  if (trip.arrivalTime) {
-                    hasArrival = true;
-                    const s = calculatePunctuality(order.scheduledTime, trip.arrivalTime).status;
-                    if (s === 'Atrasado') hasDelay = true;
-                  }
                   if (trip.arrivalTime && trip.returnTime) {
                     totalCycle += calculateCycleTime(trip.arrivalTime, trip.returnTime);
                     completedTrips++;
                   }
                 });
-                if (hasDelay) status = 'Atrasado';
-                else if (!hasArrival) status = 'Pendiente'; // Default to Pendiente if no arrival yet
-                
-                if (hasMultiLoad) {
-                  // We can add a custom badge or just modify the status display
-                }
               }
 
               const avgCycle = completedTrips > 0 ? Math.round(totalCycle / completedTrips) : 0;
@@ -92,7 +94,11 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400 truncate max-w-[150px]">{order.elementToPour || '-'}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 min-w-[120px] max-w-[200px]">
+                    <div className="whitespace-normal break-words line-clamp-2 hover:line-clamp-none transition-all">
+                      {order.elementToPour || '-'}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.orderDate}</TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.scheduledTime}</TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.requestedVolume} m³</TableCell>
@@ -114,11 +120,12 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                         <div className="inline-flex items-center justify-center cursor-help text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                           <MessageSquare className="w-4 h-4" />
                         </div>
+                        {/* Tooltip mejorado con posicionamiento relativo al ancho de pantalla */}
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[100]">
                           <motion.div 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl min-w-[200px] max-w-[300px] text-left"
+                            className="bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl min-w-[200px] max-w-[320px] text-left whitespace-normal break-words"
                           >
                             {order.customerComments}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />

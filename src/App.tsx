@@ -307,13 +307,26 @@ export default function App() {
 
         let scheduledTime = '';
         const timeCell = row.getCell(colHora).value;
+        
         if (timeCell instanceof Date) {
-          scheduledTime = timeCell.toTimeString().substring(0, 5);
+          // Usamos UTC para evitar desfases de zona horaria comunes al leer Excel
+          const hours = timeCell.getUTCHours().toString().padStart(2, '0');
+          const minutes = timeCell.getUTCMinutes().toString().padStart(2, '0');
+          scheduledTime = `${hours}:${minutes}`;
         } else if (typeof timeCell === 'number') {
           const totalMinutes = Math.round(timeCell * 24 * 60);
-          scheduledTime = `${Math.floor(totalMinutes / 60).toString().padStart(2, '0')}:${(totalMinutes % 60).toString().padStart(2, '0')}`;
+          const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+          const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+          scheduledTime = `${hours}:${minutes}`;
         } else {
-          scheduledTime = String(timeCell || '').trim();
+          const rawTime = String(timeCell || '').trim();
+          // Intentar extraer formato HH:mm si viene en una cadena más larga
+          const timeMatch = rawTime.match(/(\d{1,2}):(\d{2})/);
+          if (timeMatch) {
+            scheduledTime = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+          } else {
+            scheduledTime = rawTime;
+          }
         }
 
         const requestedVolume = parseFloat(row.getCell(colVolumen).value?.toString() || '0');
