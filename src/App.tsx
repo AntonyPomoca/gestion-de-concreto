@@ -280,6 +280,7 @@ export default function App() {
       // Column finding logic (simple version)
       let colFecha = 1, colHora = 2, colPedido = 3, colVolumen = 4;
       let colCliente = -1, colProdComercial = -1, colDescTecnica = -1, colElemColar = -1;
+      let colMetodoDescarga = -1, colFrecuencia = -1, colResponsable = -1, colComentarios = -1;
 
       worksheet.getRow(1).eachCell((cell, colNumber) => {
         const val = cell.value?.toString().toLowerCase() || '';
@@ -289,8 +290,12 @@ export default function App() {
         else if (val.includes('pedido') || val.includes('nro')) colPedido = colNumber;
         else if (val.includes('cliente')) colCliente = colNumber;
         else if (val.includes('prod. comercial')) colProdComercial = colNumber;
-        else if (val.includes('desc. técnica')) colDescTecnica = colNumber;
-        else if (val.includes('elem. a colar')) colElemColar = colNumber;
+        else if (val.includes('desc. técnica') || val.includes('técnica')) colDescTecnica = colNumber;
+        else if (val.includes('elem. a colar') || val.includes('colar')) colElemColar = colNumber;
+        else if (val.includes('descarga')) colMetodoDescarga = colNumber;
+        else if (val.includes('frecuencia') || val.includes('frec.')) colFrecuencia = colNumber;
+        else if (val.includes('responsable')) colResponsable = colNumber;
+        else if (val.includes('comentario')) colComentarios = colNumber;
       });
 
       worksheet.eachRow((row, rowNumber) => {
@@ -329,6 +334,10 @@ export default function App() {
             commercialProduct: colProdComercial !== -1 ? row.getCell(colProdComercial).value?.toString() : '',
             technicalDescription: colDescTecnica !== -1 ? row.getCell(colDescTecnica).value?.toString() : '',
             elementToPour: colElemColar !== -1 ? row.getCell(colElemColar).value?.toString() : '',
+            unloadingMethod: colMetodoDescarga !== -1 ? row.getCell(colMetodoDescarga).value?.toString() : '',
+            frequency: colFrecuencia !== -1 ? row.getCell(colFrecuencia).value?.toString() : '',
+            customerComments: colComentarios !== -1 ? row.getCell(colComentarios).value?.toString() : '',
+            responsible: colResponsable !== -1 ? row.getCell(colResponsable).value?.toString() : '',
           });
         }
       });
