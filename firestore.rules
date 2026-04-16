@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: orders
+    // Fields: orderNumber, orderDate, scheduledTime, clientName, commercialProduct, 
+    //         technicalDescription, elementToPour, unloadingMethod, frequency, 
+    //         customerComments, responsible, requestedVolume, actualVolume, 
+    //         unitCapacity, status, userId, createdAt
+    //
+    // Collection: trips
+    // Fields: orderId, unitId, arrivalTime, returnTime, isMultiLoad, userId
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidOrder(data) {
+      return data.orderNumber is string && data.orderNumber.size() > 0 &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidTrip(data) {
+      return data.orderId is string && data.unitId is string &&
+             data.userId == request.auth.uid;
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /trips/{tripId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

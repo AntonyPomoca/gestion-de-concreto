@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "Concrete delivery order",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string" },
+        "orderDate": { "type": "string" },
+        "scheduledTime": { "type": "string" },
+        "clientName": { "type": "string" },
+        "commercialProduct": { "type": "string" },
+        "technicalDescription": { "type": "string" },
+        "elementToPour": { "type": "string" },
+        "unloadingMethod": { "type": "string" },
+        "frequency": { "type": "string" },
+        "customerComments": { "type": "string" },
+        "responsible": { "type": "string" },
+        "requestedVolume": { "type": "number" },
+        "actualVolume": { "type": "number" },
+        "unitCapacity": { "type": "number" },
+        "status": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderNumber", "orderDate", "userId"]
+    },
+    "Trip": {
+      "title": "Trip",
+      "description": "Individual trip for an order",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "arrivalTime": { "type": "string" },
+        "returnTime": { "type": "string" },
+        "isMultiLoad": { "type": "boolean" }
+      },
+      "required": ["orderId", "unitId"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of concrete orders"
+    },
+    "/trips/{tripId}": {
+      "schema": "Trip",
+      "description": "Individual delivery trips"
+    }
+  }
+}
