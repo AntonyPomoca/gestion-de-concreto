@@ -21,13 +21,13 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
           <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Pedido</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Elem. Colar</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Fecha</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Prog.</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Sol.</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Real</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Estado</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Desc. Promedio</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Frec. Llegada</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Fecha</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Prog.</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Vol. Sol.</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Vol. Real</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Estado</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Desc. Promedio</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Frec. Llegada</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Obs.</TableHead>
             <TableHead className="text-right font-medium text-slate-500 dark:text-slate-400">Acciones</TableHead>
           </TableRow>
@@ -108,11 +108,11 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                       {order.elementToPour || '-'}
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{order.orderDate}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{order.scheduledTime}</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{order.requestedVolume} m³</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{order.actualVolume} m³</TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 text-center whitespace-nowrap">{order.orderDate}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 text-center whitespace-nowrap">{order.scheduledTime} hrs</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 text-center whitespace-nowrap">{order.requestedVolume} m³</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 text-center whitespace-nowrap">{order.actualVolume} m³</TableCell>
+                  <TableCell className="text-center">
                     {displayStatus === 'Pendiente' ? (
                       <span className="text-slate-400 dark:text-slate-500 font-medium">-</span>
                     ) : (
@@ -121,10 +121,10 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">
+                  <TableCell className="text-slate-600 dark:text-slate-400 text-center whitespace-nowrap">
                     {avgCycle > 0 ? formatDuration(avgCycle) : '-'}
                   </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400 font-medium">
+                  <TableCell className="text-slate-600 dark:text-slate-400 font-medium text-center whitespace-nowrap">
                     {avgInterval > 0 ? (
                       <span className="text-blue-600 dark:text-blue-400 text-xs">+{formatDuration(avgInterval)}</span>
                     ) : '-'}
