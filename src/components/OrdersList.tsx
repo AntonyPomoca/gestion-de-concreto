@@ -26,7 +26,8 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Sol.</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Real</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Estado</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Ciclo Prom.</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Desc. Promedio</TableHead>
+            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Frec. Llegada</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Obs.</TableHead>
             <TableHead className="text-right font-medium text-slate-500 dark:text-slate-400">Acciones</TableHead>
           </TableRow>
@@ -34,7 +35,7 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
         <TableBody>
           {orders.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-12 text-muted-foreground dark:text-slate-500">
+              <TableCell colSpan={10} className="text-center py-12 text-muted-foreground dark:text-slate-500">
                 No hay pedidos registrados
               </TableCell>
             </TableRow>
@@ -44,18 +45,19 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
               let status: 'A tiempo' | 'Atrasado' | 'Cancelado' | 'Pendiente' = order.status || 'A tiempo';
               let totalCycle = 0;
               let completedTrips = 0;
+              let avgInterval = 0;
 
               if (status !== 'Cancelado') {
                 let hasArrival = false;
                 let hasMultiLoad = false;
                 
-                // Sort trips by time to get the "first" one (or use the first index depending on data layout)
-                // For now we use the first one entered that has an arrival time.
-                const firstTripWithArrival = order.trips.find(t => t.arrivalTime);
+                // Sort trips by time to get the "first" one
+                const validTrips = [...order.trips].filter(t => t.arrivalTime).sort((a, b) => a.arrivalTime!.localeCompare(b.arrivalTime!));
+                const firstTripWithArrival = validTrips[0];
                 
                 if (firstTripWithArrival) {
                   hasArrival = true;
-                  const s = calculatePunctuality(order.scheduledTime, firstTripWithArrival.arrivalTime).status;
+                  const s = calculatePunctuality(order.scheduledTime, firstTripWithArrival.arrivalTime!).status;
                   status = s;
                 } else {
                   status = 'Pendiente';
@@ -69,6 +71,14 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                     completedTrips++;
                   }
                 });
+                
+                if (validTrips.length > 1) {
+                  let totalInterval = 0;
+                  for (let i = 1; i < validTrips.length; i++) {
+                    totalInterval += calculateTimeDiff(validTrips[i-1].arrivalTime!, validTrips[i].arrivalTime!);
+                  }
+                  avgInterval = Math.round(totalInterval / (validTrips.length - 1));
+                }
               }
 
               const avgCycle = completedTrips > 0 ? Math.round(totalCycle / completedTrips) : 0;
@@ -113,6 +123,11 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
                     {avgCycle > 0 ? formatDuration(avgCycle) : '-'}
+                  </TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400 font-medium">
+                    {avgInterval > 0 ? (
+                      <span className="text-blue-600 dark:text-blue-400 text-xs">+{formatDuration(avgInterval)}</span>
+                    ) : '-'}
                   </TableCell>
                   <TableCell className="text-center">
                     {order.customerComments && order.customerComments.trim() !== '' && (

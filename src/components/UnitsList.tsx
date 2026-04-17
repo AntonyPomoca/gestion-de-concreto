@@ -37,14 +37,13 @@ export function UnitsList({ orders }: { orders: Order[] }) {
               <TableHead className="font-medium text-slate-500 dark:text-slate-400">Pedido</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Horario (Obra)</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Tiempo en Obra</TableHead>
-              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Intervalos</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Total Viajes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {units.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground dark:text-slate-500">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground dark:text-slate-500">
                   No hay unidades registradas
                 </TableCell>
               </TableRow>
@@ -119,21 +118,6 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                               {formatDuration(info.cycle)}
                             </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex flex-col gap-2 py-1 items-center">
-                        {tripsInfo.map((info: any, idx) => (
-                          <div key={idx} className="h-8 flex items-center">
-                            {info.arrivalInterval !== null ? (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-bold border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                +{formatDuration(info.arrivalInterval)}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-300 dark:text-slate-700">-</span>
-                            )}
                           </div>
                         ))}
                       </div>
