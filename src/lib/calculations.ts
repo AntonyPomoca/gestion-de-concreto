@@ -55,11 +55,10 @@ export function calculateTimeDiff(time1: string, time2: string): number {
 }
 
 export function formatDuration(totalMinutes: number): string {
-  if (totalMinutes < 0) return "0 min";
+  if (totalMinutes <= 0) return "0m";
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   
-  if (hours === 0) return `${minutes} min`;
-  if (minutes === 0) return `${hours} h`;
-  return `${hours}h ${minutes}m`;
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes === 0 ? '' : minutes + 'm'}`.trim();
 }

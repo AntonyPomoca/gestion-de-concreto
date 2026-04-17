@@ -1,5 +1,5 @@
 import { Order } from '../types';
-import { calculatePunctuality, calculateCycleTime, calculateTimeDiff } from '../lib/calculations';
+import { calculatePunctuality, calculateCycleTime, calculateTimeDiff, formatDuration } from '../lib/calculations';
 import { getUnitColors } from '../lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -112,7 +112,7 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                     )}
                   </TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">
-                    {avgCycle > 0 ? `${avgCycle} min` : '-'}
+                    {avgCycle > 0 ? formatDuration(avgCycle) : '-'}
                   </TableCell>
                   <TableCell className="text-center">
                     {order.customerComments && order.customerComments.trim() !== '' && (
