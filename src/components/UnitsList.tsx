@@ -1,5 +1,5 @@
 import { Order } from '../types';
-import { calculateCycleTime, calculateTimeDiff } from '../lib/calculations';
+import { calculateCycleTime, calculateTimeDiff, formatDuration } from '../lib/calculations';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Truck } from 'lucide-react';
@@ -38,8 +38,8 @@ export function UnitsList({ orders }: { orders: Order[] }) {
               <TableHead className="font-medium text-slate-500 dark:text-slate-400">Unidad</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400">Pedido</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Horario (Obra)</TableHead>
-              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Min. Obra</TableHead>
-              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Intervalo</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Tiempo en Obra</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Intervalos</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Total Viajes</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,7 +124,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                         {tripsInfo.map((info: any, idx) => (
                           <div key={idx} className="h-8 flex items-center">
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                              {info.cycle} min
+                              {formatDuration(info.cycle)}
                             </Badge>
                           </div>
                         ))}
@@ -136,7 +136,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                           <div key={idx} className="h-8 flex items-center">
                             {info.arrivalInterval !== null ? (
                               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-bold border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                +{info.arrivalInterval}'
+                                +{formatDuration(info.arrivalInterval)}
                               </Badge>
                             ) : (
                               <span className="text-slate-300 dark:text-slate-700">-</span>
