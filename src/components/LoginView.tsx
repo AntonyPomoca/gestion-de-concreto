@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { LogIn } from 'lucide-react';
 import { signInWithGoogle } from '../lib/firebase';
 import { toast } from 'sonner';
-import ollaImg from '@/assets/olla.png';
+import { OLLA_BASE64 } from '@/lib/images';
 
 export function LoginView() {
   const handleLogin = async () => {
@@ -21,7 +21,7 @@ export function LoginView() {
       <div className="max-w-md w-full space-y-8 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 text-center">
         <div className="flex justify-center">
           <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-            <img src={ollaImg} alt="Olla" className="w-12 h-12 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
+            <img src={OLLA_BASE64} alt="Olla" className="w-12 h-12 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
           </div>
         </div>
         <div>

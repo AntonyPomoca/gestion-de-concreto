@@ -2,7 +2,7 @@ import { Order } from '../types';
 import { calculatePunctuality, calculateCycleTime } from '../lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Clock, AlertTriangle, CheckCircle, Package, Activity } from 'lucide-react';
-import ollaImg from '@/assets/olla.png';
+import { OLLA_BASE64 } from '@/lib/images';
 
 export function Dashboard({ orders }: { orders: Order[] }) {
   const totalOrders = orders.length;
@@ -90,7 +90,7 @@ export function Dashboard({ orders }: { orders: Order[] }) {
       <Card className="rounded-2xl shadow-sm border-0 bg-white dark:bg-slate-900 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground dark:text-slate-400">Unidades Utilizadas</CardTitle>
-          <img src={ollaImg} alt="Olla" className="h-5 w-5 object-contain opacity-70 invert dark:invert-0" referrerPolicy="no-referrer" />
+          <img src={OLLA_BASE64} alt="Olla" className="h-5 w-5 object-contain opacity-70 invert dark:invert-0" referrerPolicy="no-referrer" />
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-light dark:text-slate-100">{totalUniqueUnits}</div>
