@@ -3,6 +3,7 @@ import { calculateCycleTime, calculateTimeDiff, formatDuration } from '../lib/ca
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { getUnitColors } from '../lib/utils';
+import ollaImg from '@/assets/olla.png';
 
 export function UnitsList({ orders }: { orders: Order[] }) {
   // Group orders by unitId
@@ -26,7 +27,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 px-2">
-        <img src="/olla.png" alt="Olla" className="w-6 h-6 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
+        <img src={ollaImg} alt="Olla" className="w-6 h-6 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
         <h2 className="text-xl font-semibold dark:text-slate-100">Listado de Unidades</h2>
       </div>
       
@@ -93,7 +94,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                     <TableCell className="font-bold text-slate-900 dark:text-slate-100 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                          <img src="/olla.png" alt="Olla" className="w-5 h-5 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
+                          <img src={ollaImg} alt="Olla" className="w-5 h-5 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
                         </div>
                         {unitId}
                       </div>

@@ -17,6 +17,7 @@ import { auth, logout, db } from './lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, getDocs, writeBatch, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { LoginView } from './components/LoginView';
+import ollaImg from '@/assets/olla.png';
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -474,7 +475,7 @@ export default function App() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <img src="/olla.png" alt="Olla" className="w-8 h-8 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
+                  <img src={ollaImg} alt="Olla" className="w-8 h-8 object-contain invert dark:invert-0" referrerPolicy="no-referrer" />
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Hola, {user.displayName?.split(' ')[0]}</h1>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Gestión de Concreto</p>
