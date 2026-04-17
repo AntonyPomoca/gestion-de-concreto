@@ -1,5 +1,5 @@
 import { Order } from '../types';
-import { calculatePunctuality, calculateCycleTime } from '../lib/calculations';
+import { calculatePunctuality, calculateCycleTime, calculateTimeDiff } from '../lib/calculations';
 import { getUnitColors } from '../lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -25,7 +25,6 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Prog.</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Sol.</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Vol. Real</TableHead>
-            <TableHead className="font-medium text-slate-500 dark:text-slate-400">Viajes</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Estado</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400">Ciclo Prom.</TableHead>
             <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Obs.</TableHead>
@@ -35,7 +34,7 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
         <TableBody>
           {orders.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-12 text-muted-foreground dark:text-slate-500">
+              <TableCell colSpan={9} className="text-center py-12 text-muted-foreground dark:text-slate-500">
                 No hay pedidos registrados
               </TableCell>
             </TableRow>
@@ -103,7 +102,6 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.scheduledTime}</TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.requestedVolume} m³</TableCell>
                   <TableCell className="text-slate-600 dark:text-slate-400">{order.actualVolume} m³</TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{order.trips.length}</TableCell>
                   <TableCell>
                     {displayStatus === 'Pendiente' ? (
                       <span className="text-slate-400 dark:text-slate-500 font-medium">-</span>
@@ -113,7 +111,9 @@ export function OrdersList({ orders, onEdit, onDelete }: OrdersListProps) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-400">{avgCycle > 0 ? `${avgCycle} min` : '-'}</TableCell>
+                  <TableCell className="text-slate-600 dark:text-slate-400">
+                    {avgCycle > 0 ? `${avgCycle} min` : '-'}
+                  </TableCell>
                   <TableCell className="text-center">
                     {order.customerComments && order.customerComments.trim() !== '' && (
                       <div className="relative inline-block group">

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Order } from './types';
 import { api } from './services/api';
-import { calculatePunctuality } from './lib/calculations';
+import { calculatePunctuality, calculateCycleTime } from './lib/calculations';
 import { Dashboard } from './components/Dashboard';
 import { OrdersList } from './components/OrdersList';
 import { UnitsList } from './components/UnitsList';
@@ -195,7 +195,8 @@ export default function App() {
       { header: 'Número de Pedido', key: 'orderNumber', width: 20 },
       { header: 'ID Unidad', key: 'unitId', width: 15 },
       { header: 'Llegada Obra', key: 'arrivalTime', width: 15 },
-      { header: 'Salida Obra', key: 'returnTime', width: 15 }
+      { header: 'Salida Obra', key: 'returnTime', width: 15 },
+      { header: 'Tiempo en Obra (min)', key: 'cycleTime', width: 20 }
     ];
 
     orders.forEach(order => {
@@ -218,11 +219,16 @@ export default function App() {
       });
 
       order.trips.forEach(trip => {
+        const cycleTime = (trip.arrivalTime && trip.returnTime) 
+          ? calculateCycleTime(trip.arrivalTime, trip.returnTime) 
+          : '';
+          
         unitsSheet.addRow({
           orderNumber: order.orderNumber,
           unitId: trip.unitId,
           arrivalTime: trip.arrivalTime,
-          returnTime: trip.returnTime
+          returnTime: trip.returnTime,
+          cycleTime: cycleTime
         });
       });
     });
@@ -265,76 +271,140 @@ export default function App() {
         throw new Error('No se encontró una hoja válida en el archivo');
       }
 
+      const getCellValue = (cell: any): any => {
+        if (!cell) return null;
+        let val = cell.value;
+        if (val && typeof val === 'object' && 'result' in val) val = val.result;
+        return val;
+      };
+
       const normalizeDateFunc = (dateVal: any): string => {
-        if (!dateVal) return '';
-        let val = dateVal;
-        if (typeof dateVal === 'object' && dateVal.result !== undefined) val = dateVal.result;
+        const val = dateVal;
+        if (!val) return '';
+        
         if (val instanceof Date) {
-          return val.toISOString().split('T')[0];
+          // IMPORTANTE: Usar UTC garantiza que el día sea exacto al que se ve en el archivo, 
+          // ignorando la zona horaria local del dispositivo.
+          const year = val.getUTCFullYear();
+          const month = String(val.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(val.getUTCDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
         }
-        return String(val).trim();
+        
+        const str = String(val).trim();
+        const dateMatch = str.match(/(\d{1,4})[/-](\d{1,2})[/-](\d{1,4})/);
+        if (dateMatch) {
+          let y, m, d;
+          if (dateMatch[1].length === 4) {
+            y = dateMatch[1]; m = dateMatch[2]; d = dateMatch[3];
+          } else {
+            d = dateMatch[1]; m = dateMatch[2]; y = dateMatch[3];
+          }
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        return str;
       };
 
       const ordersMap = new Map<string, any>();
       
-      // Column finding logic (simple version)
-      let colFecha = 1, colHora = 2, colPedido = 3, colVolumen = 4;
+      let headerRowNumber = 1;
+      for (let i = 1; i <= 15; i++) {
+        const row = worksheet.getRow(i);
+        let matchCount = 0;
+        row.eachCell((cell) => {
+          const v = (cell.text || getCellValue(cell) || '').toString().toLowerCase();
+          if (v.includes('fecha') || v.includes('pedido') || v.includes('nro') || v.includes('requer') || v === 'hora') {
+            matchCount++;
+          }
+        });
+        // Requerir al menos 2 coincidencias para considerar que es la fila de cabecera
+        if (matchCount >= 2) {
+          headerRowNumber = i;
+          break;
+        }
+      }
+
+      let colFecha = -1, colHora = -1, colPedido = -1, colVolumen = -1;
       let colCliente = -1, colProdComercial = -1, colDescTecnica = -1, colElemColar = -1;
       let colMetodoDescarga = -1, colFrecuencia = -1, colResponsable = -1, colComentarios = -1;
 
-      worksheet.getRow(1).eachCell((cell, colNumber) => {
-        const val = cell.value?.toString().toLowerCase() || '';
+      worksheet.getRow(headerRowNumber).eachCell((cell, colNumber) => {
+        const val = (cell.text || getCellValue(cell) || '').toString().toLowerCase().trim();
+        
         if (val.includes('fecha')) colFecha = colNumber;
-        else if (val.includes('hora') || val.includes('prog')) colHora = colNumber;
-        else if (val.includes('vol') || val.includes('m3')) colVolumen = colNumber;
-        else if (val.includes('pedido') || val.includes('nro')) colPedido = colNumber;
+        else if (val === 'hora' || val === 'hora requer' || val === 'hora requer.' || val === 'h.' || val === 'hr' || val.includes('hora requer')) {
+          colHora = colNumber;
+        }
+        else if (val.includes('requer') || val.includes('prog') || (val.includes('hora') && !val.includes('llegada'))) {
+          // Si no es un match exacto, preferir columnas que tengan "hora" pero que NO sean de llegada si es posible
+          if (colHora === -1) colHora = colNumber;
+        }
+        else if (val.includes('vol') || val.includes('m3') || val.includes('cantidad')) colVolumen = colNumber;
+        else if (val.includes('pedido') || val.includes('nro') || val.includes('orden')) colPedido = colNumber;
         else if (val.includes('cliente')) colCliente = colNumber;
-        else if (val.includes('prod. comercial')) colProdComercial = colNumber;
-        else if (val.includes('desc. técnica') || val.includes('técnica')) colDescTecnica = colNumber;
-        else if (val.includes('elem. a colar') || val.includes('colar')) colElemColar = colNumber;
-        else if (val.includes('descarga')) colMetodoDescarga = colNumber;
+        else if (val.includes('prod. comercial') || val.includes('producto')) colProdComercial = colNumber;
+        else if (val.includes('técnica') || val.includes('especificacion')) colDescTecnica = colNumber;
+        else if (val.includes('colar') || val.includes('elemento')) colElemColar = colNumber;
+        else if (val.includes('descarga') || val.includes('metodo')) colMetodoDescarga = colNumber;
         else if (val.includes('frecuencia') || val.includes('frec.')) colFrecuencia = colNumber;
         else if (val.includes('responsable')) colResponsable = colNumber;
-        else if (val.includes('comentario')) colComentarios = colNumber;
+        else if (val.includes('comentario') || val.includes('obs') || val.includes('observación')) colComentarios = colNumber;
       });
 
+      if (colFecha === -1) colFecha = 1;
+      if (colHora === -1) colHora = 2;
+      if (colPedido === -1) colPedido = 3;
+      if (colVolumen === -1) colVolumen = 4;
+
       worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
+        if (rowNumber <= headerRowNumber) return;
         
-        const orderDate = normalizeDateFunc(row.getCell(colFecha).value);
-        let orderNumber = row.getCell(colPedido).value?.toString().trim() || '';
+        const orderDate = normalizeDateFunc(getCellValue(row.getCell(colFecha)));
+        let orderNumber = getCellValue(row.getCell(colPedido))?.toString().trim() || '';
         if (!orderDate || !orderNumber) return;
 
         let scheduledTime = '';
-        const timeCell = row.getCell(colHora).value;
+        const cell = row.getCell(colHora);
+        const rawText = cell.text ? String(cell.text).trim() : '';
+        let val = getCellValue(cell);
+
+        // 1. Prioridad absoluta al texto visible (Regla: Lo que ves en Excel es lo que obtienes)
+        const timeMatch = rawText.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          let h = parseInt(timeMatch[1]);
+          const m = timeMatch[2];
+          // Normalizar texto para detectar am/pm incluso si tiene puntos (p. m. -> pm)
+          const normalizedIndicator = rawText.toLowerCase().replace(/\./g, '').replace(/\s+/g, '');
+          if (normalizedIndicator.includes('pm') && h < 12) h += 12;
+          if (normalizedIndicator.includes('am') && h === 12) h = 0;
+          scheduledTime = `${h.toString().padStart(2, '0')}:${m}`;
+        } 
         
-        if (timeCell instanceof Date) {
-          // Usamos UTC para evitar desfases de zona horaria comunes al leer Excel
-          const hours = timeCell.getUTCHours().toString().padStart(2, '0');
-          const minutes = timeCell.getUTCMinutes().toString().padStart(2, '0');
-          scheduledTime = `${hours}:${minutes}`;
-        } else if (typeof timeCell === 'number') {
-          const totalMinutes = Math.round(timeCell * 24 * 60);
-          const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-          const minutes = (totalMinutes % 60).toString().padStart(2, '0');
-          scheduledTime = `${hours}:${minutes}`;
-        } else {
-          const rawTime = String(timeCell || '').trim();
-          // Intentar extraer formato HH:mm si viene en una cadena más larga
-          const timeMatch = rawTime.match(/(\d{1,2}):(\d{2})/);
-          if (timeMatch) {
-            scheduledTime = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
-          } else {
-            scheduledTime = rawTime;
+        // 2. Fallback al valor numérico o Date usando lógica de zona horaria CERO (UTC)
+        if (!scheduledTime) {
+          if (typeof val === 'number') {
+            // Conversión matemática pura sin involucrar objetos Date (evita saltos de zona horaria)
+            const totalSecs = Math.round(val * 24 * 3600);
+            const h = Math.floor(totalSecs / 3600) % 24;
+            const m = Math.floor((totalSecs % 3600) / 60) % 60;
+            scheduledTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+          } else if (val instanceof Date) {
+            // Siempre usar UTC para horas de Excel ya que representan el tiempo "crudo" sin offset
+            const h = val.getUTCHours().toString().padStart(2, '0');
+            const m = val.getUTCMinutes().toString().padStart(2, '0');
+            scheduledTime = `${h}:${m}`;
           }
         }
 
-        const requestedVolume = parseFloat(row.getCell(colVolumen).value?.toString() || '0');
-        const compositeKey = `${orderNumber}_${orderDate}`;
+        if (!scheduledTime) return; 
+
+        const requestedVolume = parseFloat(getCellValue(row.getCell(colVolumen))?.toString() || '0');
+        const compositeKey = `${orderNumber}_${orderDate}_${scheduledTime}`.replace(/\s+/g, '_');
 
         if (!ordersMap.has(compositeKey)) {
           ordersMap.set(compositeKey, {
-            id: Math.random().toString(36).substring(2, 15),
+            // Usamos un ID determinístico para evitar duplicados si se re-importa el mismo archivo
+            id: `order_${compositeKey}`,
             orderNumber,
             orderDate,
             scheduledTime,
@@ -343,14 +413,14 @@ export default function App() {
             unitCapacity: 8,
             status: 'A tiempo',
             trips: [],
-            clientName: colCliente !== -1 ? row.getCell(colCliente).value?.toString() : '',
-            commercialProduct: colProdComercial !== -1 ? row.getCell(colProdComercial).value?.toString() : '',
-            technicalDescription: colDescTecnica !== -1 ? row.getCell(colDescTecnica).value?.toString() : '',
-            elementToPour: colElemColar !== -1 ? row.getCell(colElemColar).value?.toString() : '',
-            unloadingMethod: colMetodoDescarga !== -1 ? row.getCell(colMetodoDescarga).value?.toString() : '',
-            frequency: colFrecuencia !== -1 ? row.getCell(colFrecuencia).value?.toString() : '',
-            customerComments: colComentarios !== -1 ? row.getCell(colComentarios).value?.toString() : '',
-            responsible: colResponsable !== -1 ? row.getCell(colResponsable).value?.toString() : '',
+            clientName: colCliente !== -1 ? getCellValue(row.getCell(colCliente))?.toString() || '' : '',
+            commercialProduct: colProdComercial !== -1 ? getCellValue(row.getCell(colProdComercial))?.toString() || '' : '',
+            technicalDescription: colDescTecnica !== -1 ? getCellValue(row.getCell(colDescTecnica))?.toString() || '' : '',
+            elementToPour: colElemColar !== -1 ? getCellValue(row.getCell(colElemColar))?.toString() || '' : '',
+            unloadingMethod: colMetodoDescarga !== -1 ? getCellValue(row.getCell(colMetodoDescarga))?.toString() || '' : '',
+            frequency: colFrecuencia !== -1 ? getCellValue(row.getCell(colFrecuencia))?.toString() || '' : '',
+            customerComments: colComentarios !== -1 ? getCellValue(row.getCell(colComentarios))?.toString() || '' : '',
+            responsible: colResponsable !== -1 ? getCellValue(row.getCell(colResponsable))?.toString() || '' : '',
           });
         }
       });

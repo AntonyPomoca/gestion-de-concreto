@@ -42,3 +42,14 @@ export function calculateRequiredTrips(totalVolume: number, unitCapacity: number
   if (!totalVolume || !unitCapacity || unitCapacity <= 0) return 0;
   return Math.ceil(totalVolume / unitCapacity);
 }
+
+export function calculateTimeDiff(time1: string, time2: string): number {
+  if (!time1 || !time2) return 0;
+  try {
+    const t1 = parse(time1, 'HH:mm', new Date());
+    const t2 = parse(time2, 'HH:mm', new Date());
+    return differenceInMinutes(t2, t1);
+  } catch (e) {
+    return 0;
+  }
+}

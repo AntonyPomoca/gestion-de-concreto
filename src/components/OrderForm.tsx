@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { calculatePunctuality, calculateCycleTime } from '../lib/calculations';
 import { Order, Trip } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';

@@ -1,4 +1,5 @@
 import { Order } from '../types';
+import { calculateCycleTime, calculateTimeDiff } from '../lib/calculations';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Truck } from 'lucide-react';
@@ -35,14 +36,17 @@ export function UnitsList({ orders }: { orders: Order[] }) {
           <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
               <TableHead className="font-medium text-slate-500 dark:text-slate-400">Unidad</TableHead>
-              <TableHead className="font-medium text-slate-500 dark:text-slate-400">Pedidos Asociados</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400">Pedido</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Horario (Obra)</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Min. Obra</TableHead>
+              <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Intervalo</TableHead>
               <TableHead className="font-medium text-slate-500 dark:text-slate-400 text-center">Total Viajes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {units.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground dark:text-slate-500">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground dark:text-slate-500">
                   No hay unidades registradas
                 </TableCell>
               </TableRow>
@@ -61,33 +65,87 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                 const normalTrips = data.trips.filter(t => !t.isMultiLoad);
                 const totalTripsCount = normalTrips.length + mcGroups.size;
 
+                // Pre-calculate all trip details for consistent row rendering
+                const tripsInfo = data.trips.map((trip: any) => {
+                  const cycle = (trip.arrivalTime && trip.returnTime) ? calculateCycleTime(trip.arrivalTime, trip.returnTime) : null;
+                  if (cycle === null) return null;
+                  
+                  const relevantOrder = orders.find(o => o.id === trip.orderId);
+                  const orderNum = relevantOrder ? relevantOrder.orderNumber : '...';
+
+                  let arrivalInterval = null;
+                  if (relevantOrder && trip.arrivalTime) {
+                    const orderTripsSorted = [...relevantOrder.trips]
+                      .filter(t => t.arrivalTime)
+                      .sort((a, b) => (a.arrivalTime || '').localeCompare(b.arrivalTime || ''));
+                    
+                    const currentTripIdx = orderTripsSorted.findIndex(t => t.id === trip.id);
+                    if (currentTripIdx > 0) {
+                      const prevOrderTrip = orderTripsSorted[currentTripIdx - 1];
+                      arrivalInterval = calculateTimeDiff(prevOrderTrip.arrivalTime!, trip.arrivalTime!);
+                    }
+                  }
+
+                  return { trip, cycle, orderNum, arrivalInterval };
+                }).filter(Boolean);
+
                 return (
                   <TableRow key={unitId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 border-slate-100 dark:border-slate-800">
-                    <TableCell className="font-bold text-slate-900 dark:text-slate-100">
-                      {unitId}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      <div className="flex flex-wrap gap-1">
-                        {data.orders.map(order => {
-                          const relevantTrip = order.trips.find(t => t.unitId === unitId && t.isMultiLoad);
-                          const isMultiLoad = !!relevantTrip;
-                          const unitColors = isMultiLoad 
-                            ? getUnitColors(unitId, relevantTrip.arrivalTime) 
-                            : { badge: '' };
-
-                          return (
-                            <Badge 
-                              key={order.id} 
-                              variant="secondary" 
-                              className={`text-[10px] font-normal ${isMultiLoad ? unitColors.badge : ''}`}
-                            >
-                              {order.orderNumber}
-                            </Badge>
-                          );
-                        })}
+                    <TableCell className="font-bold text-slate-900 dark:text-slate-100 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                          <Truck className="w-4 h-4 text-slate-500" />
+                        </div>
+                        {unitId}
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400 text-center">
+                    <TableCell>
+                      <div className="flex flex-col gap-2 py-1">
+                        {tripsInfo.map((info: any, idx) => (
+                          <div key={idx} className="h-8 flex items-center">
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">#{info.orderNum}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col gap-2 py-1 items-center">
+                        {tripsInfo.map((info: any, idx) => (
+                          <div key={idx} className="h-8 flex items-center justify-center bg-slate-50/10 dark:bg-slate-950/30 px-2 rounded-lg border border-slate-100 dark:border-slate-800 min-w-[110px]">
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                              {info.trip.arrivalTime} → {info.trip.returnTime}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col gap-2 py-1 items-center">
+                        {tripsInfo.map((info: any, idx) => (
+                          <div key={idx} className="h-8 flex items-center">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                              {info.cycle} min
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col gap-2 py-1 items-center">
+                        {tripsInfo.map((info: any, idx) => (
+                          <div key={idx} className="h-8 flex items-center">
+                            {info.arrivalInterval !== null ? (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-bold border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                +{info.arrivalInterval}'
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-300 dark:text-slate-700">-</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 text-center font-bold">
                       {totalTripsCount}
                     </TableCell>
                   </TableRow>
