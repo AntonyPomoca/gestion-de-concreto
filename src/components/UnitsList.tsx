@@ -93,11 +93,20 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-2 py-1">
-                        {tripsInfo.map((info: any, idx) => (
-                          <div key={idx} className="h-8 flex items-center">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">#{info.orderNum}</span>
-                          </div>
-                        ))}
+                        {tripsInfo.map((info: any, idx) => {
+                          const isMC = info.trip.isMultiLoad;
+                          const mcColors = isMC ? getUnitColors(info.trip.unitId, info.trip.arrivalTime) : null;
+                          return (
+                            <div key={idx} className="h-8 flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">#{info.orderNum}</span>
+                              {isMC && mcColors && (
+                                <Badge variant="outline" className={`text-[10px] px-1 py-0 h-4 ${mcColors.badge}`}>
+                                  MC
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
