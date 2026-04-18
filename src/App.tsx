@@ -100,10 +100,15 @@ export default function App() {
       // If same unit, sort by scheduled time
       return a.scheduledTime.localeCompare(b.scheduledTime);
     }
-    // Default sort by date and time descending
-    const dateA = new Date(`${a.orderDate}T${a.scheduledTime || '00:00'}`).getTime();
-    const dateB = new Date(`${b.orderDate}T${b.scheduledTime || '00:00'}`).getTime();
-    return dateB - dateA; // Newest first
+    // Default sort by date descending, but for the same date, sort by scheduled time ascending
+    const timeA = a.scheduledTime || '23:59';
+    const timeB = b.scheduledTime || '23:59';
+    
+    // Sort logic: First by date (descending), then by scheduledTime (ascending)
+    if (a.orderDate !== b.orderDate) {
+      return b.orderDate.localeCompare(a.orderDate);
+    }
+    return timeA.localeCompare(timeB);
   });
 
   const handleSaveOrder = async (order: Order) => {
