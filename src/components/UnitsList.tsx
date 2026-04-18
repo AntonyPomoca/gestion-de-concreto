@@ -69,6 +69,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                   
                   const relevantOrder = orders.find(o => o.id === trip.orderId);
                   const orderNum = relevantOrder ? relevantOrder.orderNumber : '...';
+                  const elementToPour = relevantOrder?.elementToPour || '';
 
                   let arrivalInterval = null;
                   if (relevantOrder && trip.arrivalTime) {
@@ -83,7 +84,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                     }
                   }
 
-                  return { trip, cycle, orderNum, arrivalInterval };
+                  return { trip, cycle, orderNum, arrivalInterval, elementToPour };
                 }).filter(Boolean);
 
                 return (
@@ -98,7 +99,9 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                           const mcColors = isMC ? getUnitColors(info.trip.unitId, info.trip.arrivalTime) : null;
                           return (
                             <div key={idx} className="h-8 flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">#{info.orderNum}</span>
+                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                #{info.orderNum} {info.elementToPour ? `- ${info.elementToPour}` : ''}
+                              </span>
                               {isMC && mcColors && (
                                 <Badge variant="outline" className={`text-[10px] px-1 py-0 h-4 ${mcColors.badge}`}>
                                   MC
