@@ -5,6 +5,7 @@ export interface Trip {
   arrivalTime: string; // HH:mm
   returnTime: string; // HH:mm
   isMultiLoad?: boolean;
+  isNonCompliant?: boolean;
 }
 
 export interface Order {

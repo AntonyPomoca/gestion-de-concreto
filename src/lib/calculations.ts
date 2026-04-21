@@ -54,7 +54,18 @@ export function calculateTimeDiff(time1: string, time2: string): number {
   }
 }
 
+export function formatTimeAMPM(timeStr: string | undefined | null): string {
+  if (!timeStr) return '';
+  try {
+    const d = parse(timeStr, 'HH:mm', new Date());
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch (e) {
+    return timeStr;
+  }
+}
+
 export function formatDuration(totalMinutes: number): string {
+
   if (totalMinutes <= 0) return "0 min";
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;

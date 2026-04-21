@@ -281,7 +281,7 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
                   </div>
                   <Input type="time" name="returnTime" value={trip.returnTime || ''} onChange={(e) => handleTripChange(index, e)} className="bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
                 </div>
-                <div className="flex items-end pb-2">
+                <div className="flex flex-col justify-end pb-2 space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input 
                       type="checkbox" 
@@ -291,6 +291,16 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
                       className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-slate-900 dark:focus:ring-slate-400"
                     />
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">Multicarga</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="checkbox" 
+                      name="isNonCompliant" 
+                      checked={trip.isNonCompliant || false} 
+                      onChange={(e) => handleTripChange(index, e)}
+                      className="w-4 h-4 rounded border-rose-300 dark:border-rose-700 text-rose-600 focus:ring-rose-500"
+                    />
+                    <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">Incumplimiento</span>
                   </label>
                 </div>
               </div>

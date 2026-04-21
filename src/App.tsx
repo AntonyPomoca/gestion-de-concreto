@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Order } from './types';
 import { api } from './services/api';
-import { calculatePunctuality, calculateCycleTime } from './lib/calculations';
+import { calculatePunctuality, calculateCycleTime, formatTimeAMPM, formatDuration } from './lib/calculations';
 import { Dashboard } from './components/Dashboard';
 import { OrdersList } from './components/OrdersList';
 import { UnitsList } from './components/UnitsList';
@@ -26,7 +26,13 @@ export default function App() {
   const [editingOrder, setEditingOrder] = useState<Order | undefined>();
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [filterOrderNumber, setFilterOrderNumber] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterMultiLoad, setFilterMultiLoad] = useState('Todos');
@@ -165,75 +171,122 @@ export default function App() {
   const handleExport = async () => {
     const workbook = new ExcelJS.Workbook();
     
-    // Resumen Sheet
-    const summarySheet = workbook.addWorksheet('Resumen');
-    summarySheet.columns = [
-      { header: 'Métrica', key: 'metric', width: 30 },
-      { header: 'Valor', key: 'value', width: 15 }
-    ];
-    summarySheet.addRow({ metric: 'Total Pedidos', value: orders.length });
-    summarySheet.addRow({ metric: 'Total Viajes', value: orders.reduce((acc, o) => acc + o.trips.length, 0) });
-    
     // Pedidos Sheet
     const ordersSheet = workbook.addWorksheet('Pedidos');
     ordersSheet.columns = [
-      { header: 'Número de Pedido', key: 'orderNumber', width: 20 },
+      { header: 'Numero de pedido', key: 'orderNumber', width: 20 },
       { header: 'Fecha', key: 'orderDate', width: 15 },
-      { header: 'Hora Programada', key: 'scheduledTime', width: 15 },
-      { header: 'Ubicación', key: 'clientName', width: 25 },
+      { header: 'Elem. a colar', key: 'elementToPour', width: 25 },
+      { header: 'Ubicacion', key: 'clientName', width: 25 },
+      { header: 'Desc. Tecnica', key: 'technicalDescription', width: 25 },
       { header: 'Prod. Comercial', key: 'commercialProduct', width: 20 },
-      { header: 'Desc. Técnica', key: 'technicalDescription', width: 25 },
-      { header: 'Elem. a colar', key: 'elementToPour', width: 20 },
-      { header: 'M. Descarga', key: 'unloadingMethod', width: 20 },
-      { header: 'Frecuencia', key: 'frequency', width: 15 },
-      { header: 'Comentarios Cliente', key: 'customerComments', width: 30 },
-      { header: 'Responsable', key: 'responsible', width: 20 },
-      { header: 'Volumen Solicitado', key: 'requestedVolume', width: 15 },
-      { header: 'Volumen Real', key: 'actualVolume', width: 15 },
-      { header: 'Capacidad Unidad', key: 'unitCapacity', width: 15 },
-      { header: 'Total Viajes', key: 'totalTrips', width: 15 }
+      { header: 'M.Descarga', key: 'unloadingMethod', width: 20 },
+      { header: 'Hora programada', key: 'scheduledTime', width: 15 },
+      { header: 'Hora llegada', key: 'firstArrivalTime', width: 15 },
+      { header: 'Volumen solicitado', key: 'requestedVolume', width: 15 },
+      { header: 'Volumen real', key: 'actualVolume', width: 15 },
+      { header: 'Comentarios', key: 'customerComments', width: 30 },
+      { header: 'Responsable', key: 'responsible', width: 20 }
     ];
+    
+    ordersSheet.getRow(1).eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F497D' }
+      };
+      cell.font = {
+        bold: true,
+        color: { argb: 'FFFFFFFF' }
+      };
+    });
     
     // Unidades Sheet
     const unitsSheet = workbook.addWorksheet('Unidades');
     unitsSheet.columns = [
-      { header: 'Número de Pedido', key: 'orderNumber', width: 20 },
-      { header: 'ID Unidad', key: 'unitId', width: 15 },
+      { header: 'Numero de pedido', key: 'orderNumber', width: 20 },
+      { header: 'Elemento', key: 'elementToPour', width: 25 },
+      { header: 'Ubicacion', key: 'clientName', width: 25 },
+      { header: 'Desc.Tecnica', key: 'technicalDescription', width: 25 },
+      { header: 'Descarga', key: 'unloadingMethod', width: 20 },
+      { header: 'ID unidad', key: 'unitId', width: 15 },
       { header: 'Llegada Obra', key: 'arrivalTime', width: 15 },
       { header: 'Salida Obra', key: 'returnTime', width: 15 },
-      { header: 'Tiempo en Obra (min)', key: 'cycleTime', width: 20 }
+      { header: 'Tiempo en Obra', key: 'cycleTime', width: 20 },
+      { header: 'Status', key: 'statusInfo', width: 20 }
     ];
 
-    orders.forEach(order => {
+    unitsSheet.getRow(1).eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F497D' }
+      };
+      cell.font = {
+        bold: true,
+        color: { argb: 'FFFFFFFF' }
+      };
+    });
+
+    const allTripsForExport: { order: Order; trip: typeof filteredOrders[0]['trips'][0] }[] = [];
+
+    filteredOrders.forEach(order => {
+      // Find the first arrival time among trips to represent "Hora llegada"
+      const firstTripObject = [...order.trips]
+        .filter(t => t.arrivalTime)
+        .sort((a, b) => a.arrivalTime!.localeCompare(b.arrivalTime!))[0];
+      const firstArrivalTime = firstTripObject ? firstTripObject.arrivalTime : '';
+
       ordersSheet.addRow({
         orderNumber: order.orderNumber,
         orderDate: order.orderDate,
-        scheduledTime: order.scheduledTime,
-        clientName: order.clientName,
-        commercialProduct: order.commercialProduct,
-        technicalDescription: order.technicalDescription,
         elementToPour: order.elementToPour,
+        clientName: order.clientName,
+        technicalDescription: order.technicalDescription,
+        commercialProduct: order.commercialProduct,
         unloadingMethod: order.unloadingMethod,
-        frequency: order.frequency,
+        scheduledTime: formatTimeAMPM(order.scheduledTime),
+        firstArrivalTime: formatTimeAMPM(firstArrivalTime),
+        requestedVolume: `${order.requestedVolume} m³`,
+        actualVolume: `${order.actualVolume} m³`,
         customerComments: order.customerComments,
-        responsible: order.responsible,
-        requestedVolume: order.requestedVolume,
-        actualVolume: order.actualVolume,
-        unitCapacity: order.unitCapacity,
-        totalTrips: order.trips.length
+        responsible: order.responsible
       });
 
       order.trips.forEach(trip => {
-        const cycleTime = (trip.arrivalTime && trip.returnTime) 
-          ? calculateCycleTime(trip.arrivalTime, trip.returnTime) 
-          : '';
-          
-        unitsSheet.addRow({
-          orderNumber: order.orderNumber,
-          unitId: trip.unitId,
-          arrivalTime: trip.arrivalTime,
-          returnTime: trip.returnTime,
-          cycleTime: cycleTime
+        allTripsForExport.push({ order, trip });
+      });
+    });
+
+    allTripsForExport.sort((a, b) => {
+      const timeA = a.trip.arrivalTime || '23:59';
+      const timeB = b.trip.arrivalTime || '23:59';
+      return timeA.localeCompare(timeB);
+    });
+
+    allTripsForExport.forEach(({ order, trip }) => {
+      const cycleTime = (trip.arrivalTime && trip.returnTime) 
+        ? formatDuration(calculateCycleTime(trip.arrivalTime, trip.returnTime)) 
+        : '';
+        
+      unitsSheet.addRow({
+        orderNumber: order.orderNumber,
+        elementToPour: order.elementToPour,
+        clientName: order.clientName,
+        technicalDescription: order.technicalDescription,
+        unloadingMethod: order.unloadingMethod,
+        unitId: trip.unitId,
+        arrivalTime: formatTimeAMPM(trip.arrivalTime),
+        returnTime: formatTimeAMPM(trip.returnTime),
+        cycleTime: cycleTime,
+        statusInfo: trip.isNonCompliant ? 'Incumplimiento' : (trip.isMultiLoad ? 'Multicarga' : 'Regular')
+      });
+    });
+
+    [ordersSheet, unitsSheet].forEach(sheet => {
+      sheet.eachRow((row) => {
+        row.eachCell((cell) => {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
       });
     });
@@ -243,7 +296,11 @@ export default function App() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Reporte_Concreto.xlsx';
+    
+    // Determine the date string for the filename
+    const dateString = filterDate || new Date().toISOString().split('T')[0];
+    a.download = `Reporte_${dateString}.xlsx`;
+    
     a.click();
     window.URL.revokeObjectURL(url);
   };
