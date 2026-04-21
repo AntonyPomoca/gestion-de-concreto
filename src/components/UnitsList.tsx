@@ -49,23 +49,25 @@ export function UnitsList({ orders }: { orders: Order[] }) {
               </TableRow>
             ) : (
               units.map(([unitId, data]) => {
+                // Filter out empty trips that have no arrival time so they don't bloat the counts if they are completely unstarted
+                const startedTrips = data.trips.filter((t: any) => t.arrivalTime);
+
                 // Group multicarga trips by arrivalTime to calculate counts and colors
-                const mcTrips = data.trips.filter(t => t.isMultiLoad);
+                const mcTrips = startedTrips.filter((t: any) => t.isMultiLoad);
                 const mcGroups = new Map<string, any[]>();
-                mcTrips.forEach(t => {
+                mcTrips.forEach((t: any) => {
                   const time = t.arrivalTime || 'pending';
                   const existing = mcGroups.get(time) || [];
                   existing.push(t);
                   mcGroups.set(time, existing);
                 });
 
-                const normalTrips = data.trips.filter(t => !t.isMultiLoad);
+                const normalTrips = startedTrips.filter((t: any) => !t.isMultiLoad);
                 const totalTripsCount = normalTrips.length + mcGroups.size;
 
                 // Pre-calculate all trip details for consistent row rendering
-                const tripsInfo = data.trips.map((trip: any) => {
+                const tripsInfo = startedTrips.map((trip: any) => {
                   const cycle = (trip.arrivalTime && trip.returnTime) ? calculateCycleTime(trip.arrivalTime, trip.returnTime) : null;
-                  if (cycle === null) return null;
                   
                   const relevantOrder = orders.find(o => o.id === trip.orderId);
                   const orderNum = relevantOrder ? relevantOrder.orderNumber : '...';
@@ -85,7 +87,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                   }
 
                   return { trip, cycle, orderNum, arrivalInterval, elementToPour };
-                }).filter(Boolean);
+                });
 
                 return (
                   <TableRow key={unitId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 border-slate-100 dark:border-slate-800">
@@ -117,7 +119,7 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                         {tripsInfo.map((info: any, idx) => (
                           <div key={idx} className="h-8 flex items-center justify-center bg-slate-50/10 dark:bg-slate-950/30 px-2 rounded-lg border border-slate-100 dark:border-slate-800 min-w-[110px]">
                             <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                              {info.trip.arrivalTime} → {info.trip.returnTime}
+                              {info.trip.arrivalTime} → {info.trip.returnTime || '...'}
                             </span>
                           </div>
                         ))}
@@ -127,9 +129,15 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                       <div className="flex flex-col gap-2 py-1 items-center">
                         {tripsInfo.map((info: any, idx) => (
                           <div key={idx} className="h-8 flex items-center">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                              {formatDuration(info.cycle)}
-                            </Badge>
+                            {info.cycle !== null ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                {formatDuration(info.cycle)}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 text-slate-400 border-slate-100 bg-transparent dark:border-slate-800">
+                                En obra
+                              </Badge>
+                            )}
                           </div>
                         ))}
                       </div>
