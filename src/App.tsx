@@ -185,6 +185,7 @@ export default function App() {
       { header: 'Hora llegada', key: 'firstArrivalTime', width: 15 },
       { header: 'Volumen solicitado', key: 'requestedVolume', width: 15 },
       { header: 'Volumen real', key: 'actualVolume', width: 15 },
+      { header: 'Estatus', key: 'status', width: 15 },
       { header: 'Comentarios', key: 'customerComments', width: 30 },
       { header: 'Responsable', key: 'responsible', width: 20 }
     ];
@@ -237,7 +238,19 @@ export default function App() {
         .sort((a, b) => a.arrivalTime!.localeCompare(b.arrivalTime!))[0];
       const firstArrivalTime = firstTripObject ? firstTripObject.arrivalTime : '';
 
-      ordersSheet.addRow({
+      let currentStatus = order.status || 'A tiempo';
+      if (currentStatus !== 'Cancelado') {
+        let hasDelay = false;
+        order.trips.forEach(trip => {
+          if (trip.arrivalTime) {
+            const s = calculatePunctuality(order.scheduledTime, trip.arrivalTime).status;
+            if (s === 'Atrasado') hasDelay = true;
+          }
+        });
+        if (hasDelay) currentStatus = 'Atrasado';
+      }
+
+      const row = ordersSheet.addRow({
         orderNumber: order.orderNumber,
         orderDate: order.orderDate,
         elementToPour: order.elementToPour,
@@ -247,11 +260,21 @@ export default function App() {
         unloadingMethod: order.unloadingMethod,
         scheduledTime: formatTimeAMPM(order.scheduledTime),
         firstArrivalTime: formatTimeAMPM(firstArrivalTime),
-        requestedVolume: `${order.requestedVolume} m³`,
-        actualVolume: `${order.actualVolume} m³`,
+        requestedVolume: order.requestedVolume,
+        actualVolume: order.actualVolume,
+        status: currentStatus,
         customerComments: order.customerComments,
         responsible: order.responsible
       });
+
+      const statusCell = row.getCell('status');
+      if (currentStatus === 'A tiempo') {
+        statusCell.font = { color: { argb: 'FF16A34A' }, bold: true }; // Green
+      } else if (currentStatus === 'Atrasado') {
+        statusCell.font = { color: { argb: 'FFF97316' }, bold: true }; // Orange
+      } else if (currentStatus === 'Cancelado') {
+        statusCell.font = { color: { argb: 'FFDC2626' }, bold: true }; // Red
+      }
 
       order.trips.forEach(trip => {
         allTripsForExport.push({ order, trip });
@@ -263,6 +286,27 @@ export default function App() {
       const timeB = b.trip.arrivalTime || '23:59';
       return timeA.localeCompare(timeB);
     });
+
+    // Add totals row for Pedidos
+    const totalRowNumber = filteredOrders.length + 2; // +1 for header, +1 to put it after the last row
+    if (filteredOrders.length > 0) {
+      const totalRow = ordersSheet.getRow(totalRowNumber);
+      totalRow.getCell('firstArrivalTime').value = 'TOTAL:';
+      totalRow.getCell('firstArrivalTime').font = { bold: true };
+      totalRow.getCell('firstArrivalTime').alignment = { horizontal: 'right' };
+      
+      const requestedVolumeColObj = ordersSheet.getColumn('requestedVolume');
+      const actualVolumeColObj = ordersSheet.getColumn('actualVolume');
+      
+      requestedVolumeColObj.numFmt = '0.00 "m³"';
+      actualVolumeColObj.numFmt = '0.00 "m³"';
+
+      totalRow.getCell('requestedVolume').value = { formula: `SUM(${requestedVolumeColObj.letter}2:${requestedVolumeColObj.letter}${totalRowNumber - 1})` };
+      totalRow.getCell('requestedVolume').font = { bold: true };
+      
+      totalRow.getCell('actualVolume').value = { formula: `SUM(${actualVolumeColObj.letter}2:${actualVolumeColObj.letter}${totalRowNumber - 1})` };
+      totalRow.getCell('actualVolume').font = { bold: true };
+    }
 
     allTripsForExport.forEach(({ order, trip }) => {
       const cycleTime = (trip.arrivalTime && trip.returnTime) 
@@ -287,6 +331,12 @@ export default function App() {
       sheet.eachRow((row) => {
         row.eachCell((cell) => {
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
         });
       });
     });
