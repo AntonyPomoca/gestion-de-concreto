@@ -22,16 +22,24 @@ export const api = {
 
   async createOrder(order: Order): Promise<void> {
     const orderRef = doc(db, 'orders', order.id);
+    
+    // Create a clean object without undefined values for Firestore
+    const cleanOrder = JSON.parse(JSON.stringify(order));
+    
     await setDoc(orderRef, {
-      ...order,
+      ...cleanOrder,
       createdAt: serverTimestamp()
     });
   },
 
   async updateOrder(order: Order): Promise<void> {
     const orderRef = doc(db, 'orders', order.id);
+    
+    // Create a clean object without undefined values for Firestore
+    const cleanOrder = JSON.parse(JSON.stringify(order));
+    
     await setDoc(orderRef, {
-      ...order,
+      ...cleanOrder,
       updatedAt: serverTimestamp()
     });
   },
