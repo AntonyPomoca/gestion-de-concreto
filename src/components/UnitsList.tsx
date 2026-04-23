@@ -129,7 +129,11 @@ export function UnitsList({ orders }: { orders: Order[] }) {
                       <div className="flex flex-col gap-2 py-1 items-center">
                         {tripsInfo.map((info: any, idx) => (
                           <div key={idx} className="h-8 flex items-center">
-                            {info.cycle !== null ? (
+                            {info.trip.isNonCompliant ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-rose-200 dark:border-rose-900 bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400">
+                                Incumplimiento
+                              </Badge>
+                            ) : info.cycle !== null ? (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-bold border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                                 {formatDuration(info.cycle)}
                               </Badge>

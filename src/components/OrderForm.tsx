@@ -138,6 +138,12 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
     onSubmit(finalOrder);
   };
 
+  // If order is canceled OR any trip is non-compliant, we don't require actualVolume
+  const isVolumeOptional = order.status === 'Cancelado' || (order.trips && order.trips.some(t => t.isNonCompliant));
+  // If it's a completely new order, we should let them submit without it if they haven't filled it out as it may be handled later, but the user explicitly requested it to BE required with validations
+  // Wait, the user said: "que si sea obligatorio el volumen real con las validaciones que colocamos, simplemente el error era que no me dejaba crear un pedido nuevo y darle guardar"
+  // So it SHOULD be required when creating a new order. Let's make it required UNLESS the optional conditions are met.
+  
   return (
     <form onSubmit={handleSubmit} className="space-y-8 pb-8">
       <div className="bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -168,7 +174,7 @@ export function OrderForm({ initialData, onSubmit, onCancel }: OrderFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="actualVolume" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Volumen Real (m³)</Label>
-            <Input type="number" step="0.5" id="actualVolume" name="actualVolume" value={order.actualVolume} onChange={handleOrderChange} required className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+            <Input type="number" step="0.5" id="actualVolume" name="actualVolume" value={order.actualVolume} onChange={handleOrderChange} required={!isVolumeOptional} className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="unitCapacity" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Capacidad Unidad (m³)</Label>
