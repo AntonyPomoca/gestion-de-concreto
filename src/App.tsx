@@ -129,8 +129,9 @@ export default function App() {
       setIsFormOpen(false);
       setEditingOrder(undefined);
       loadOrders();
-    } catch (error) {
-      toast.error('Error al guardar pedido');
+    } catch (error: any) {
+      console.error("Full error:", error);
+      toast.error(`Error al guardar: ${error.message || 'Desconocido'}`);
     }
   };
 
